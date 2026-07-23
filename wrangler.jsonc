@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "id-toolkit",
+  "compatibility_date": "2026-07-23",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    {
+      "pattern": "id.136136136.xyz",
+      "custom_domain": true
+    }
+  ]
+}

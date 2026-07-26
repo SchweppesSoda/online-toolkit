@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="在浏览器本地检查并清理 JPG、PNG、WebP 图片中的位置、设备、身份和拍摄时间等隐私元数据。">
+  <meta name="theme-color" content="#f2efe8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>净图 · 图片隐私清理</title>
+  <link rel="stylesheet" href="/src/tool-shell.css">
+  <link rel="stylesheet" href="/src/image-privacy.css">
+</head>
+<body class="image-privacy-page">
+  <header class="tool-shell-header">
+    <a class="tool-shell-brand" href="/" aria-label="返回在线工具箱">
+      <span class="tool-shell-mark" aria-hidden="true">匣</span>
+      <span><strong>在线工具箱</strong><small>IMAGE PRIVACY</small></span>
+    </a>
+    <nav aria-label="页面导航">
+      <a href="/">全部工具</a>
+      <a href="https://github.com/SchweppesSoda/online-toolkit" target="_blank" rel="noreferrer">查看源码</a>
+    </nav>
+  </header>
+
+  <main class="image-main">
+    <section class="image-hero" aria-labelledby="image-title">
+      <div>
+        <p class="image-eyebrow">图片隐私清理</p>
+        <h1 id="image-title">把照片里的<span class="no-break">隐私痕迹</span>，<em>清干净再发。</em></h1>
+        <p>先查看照片里藏着什么，再在本机生成一个干净副本。新副本会被重新检查，确认位置、身份、设备和拍摄时间等信息已经去除。</p>
+      </div>
+      <aside class="local-promise">
+        <strong>只在本机处理</strong>
+        <span>图片不会上传，原文件不会被修改。关闭页面后，本站不会保留副本。</span>
+      </aside>
+    </section>
+
+    <section class="image-workbench" aria-label="图片隐私清理工作台">
+      <div class="image-upload-column">
+        <section class="privacy-panel upload-panel">
+          <div class="panel-heading">
+            <span class="step-badge">1</span>
+            <div><h2>选择一张图片</h2><p>支持 JPG、PNG、WebP，单张不超过 50 MB。</p></div>
+          </div>
+          <div class="image-drop" id="imageDrop" tabindex="0" role="button" aria-controls="imageFile" aria-label="选择或拖入图片">
+            <div class="drop-empty" id="dropEmpty">
+              <span class="drop-mark" aria-hidden="true">图</span>
+              <strong>把图片拖到这里</strong>
+              <span>也可以粘贴剪贴板中的图片</span>
+              <button class="privacy-button primary" id="chooseImage" type="button">选择本地图片</button>
+            </div>
+            <figure class="image-preview-wrap" id="imagePreviewWrap" hidden>
+              <img id="imagePreview" alt="待清理图片的本地预览">
+              <figcaption id="imageCaption"></figcaption>
+            </figure>
+          </div>
+          <input class="visually-hidden" id="imageFile" type="file" accept="image/jpeg,image/png,image/webp">
+          <button class="text-button" id="replaceImage" type="button" hidden>换一张图片</button>
+        </section>
+
+        <section class="privacy-panel clean-panel">
+          <div class="panel-heading">
+            <span class="step-badge">2</span>
+            <div><h2>生成干净副本</h2><p>浏览器重新绘制像素并移除附带元数据，然后立即复检。</p></div>
+          </div>
+          <div class="clean-notice">
+            <strong>会发生什么？</strong>
+            <p>PNG 保持无损像素；JPG、WebP 会以高质量重新编码，文件大小可能变化。色彩配置、缩略图等附加数据也可能被移除。</p>
+          </div>
+          <button class="privacy-button primary wide" id="cleanImage" type="button" disabled>生成并复检干净副本</button>
+          <p class="action-status" id="cleanStatus" role="status" aria-live="polite">请先选择图片。</p>
+        </section>
+      </div>
+
+      <div class="image-report-column">
+        <section class="privacy-panel report-panel" aria-labelledby="originalReportTitle">
+          <div class="report-heading">
+            <div><span>原图检查</span><h2 id="originalReportTitle">尚未选择图片</h2></div>
+            <span class="risk-pill neutral" id="originalRisk">等待检查</span>
+          </div>
+          <div class="file-facts" id="fileFacts" hidden></div>
+          <div class="report-empty" id="originalEmpty">选择图片后，这里会列出可能泄露位置、身份、设备、时间和内容的信息。</div>
+          <div class="metadata-groups" id="originalMetadata" hidden></div>
+        </section>
+
+        <section class="privacy-panel result-panel" id="resultPanel" aria-labelledby="resultTitle">
+          <div class="report-heading">
+            <div><span>副本复检</span><h2 id="resultTitle">等待生成</h2></div>
+            <span class="risk-pill neutral" id="cleanRisk">未复检</span>
+          </div>
+          <div class="verification" id="verification">
+            <span class="verification-mark" aria-hidden="true">✓</span>
+            <div><strong>只有复检通过，才会标记为已清理</strong><p>技术参数（例如图片宽高、编码格式）不算隐私元数据。</p></div>
+          </div>
+          <div class="metadata-groups" id="cleanMetadata" hidden></div>
+          <button class="privacy-button download" id="downloadClean" type="button" disabled>下载干净副本</button>
+        </section>
+      </div>
+    </section>
+
+    <section class="format-boundary" aria-labelledby="formatTitle">
+      <h2 id="formatTitle">当前支持范围</h2>
+      <div>
+        <p><strong>可以可靠处理：</strong>JPG、PNG、WebP。</p>
+        <p><strong>暂不处理：</strong>HEIC、RAW、PDF、动图。它们可能含有多页、多帧或浏览器无法完整重写的数据，本站不会冒充“已经清理”。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="tool-shell-footer source-footer">
+    <span>元数据读取与复检使用 <a href="https://github.com/mattiasw/ExifReader" target="_blank" rel="noreferrer">ExifReader 4.41.3</a>（MPL-2.0，Mattias Wallander 及贡献者）。</span>
+    <a href="https://github.com/SchweppesSoda/online-toolkit/blob/main/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">第三方代码与许可证</a>
+  </footer>
+
+  <script type="module" src="/src/image-privacy.js"></script>
+</body>
+</html>

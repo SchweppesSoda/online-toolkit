@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("隐印工作流", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/id-photo/");
     await expect(page).toHaveTitle(/隐印/);
   });
 

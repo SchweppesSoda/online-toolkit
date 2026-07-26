@@ -1,14 +1,59 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "id-toolkit",
+  "main": "./src/worker.js",
   "compatibility_date": "2026-07-23",
+  "workers_dev": false,
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SHARE_ROOMS",
+        "class_name": "ShareRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ShareRoom"]
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "SHARE_FILES",
+      "bucket_name": "online-toolkit-share-files"
+    }
+  ],
+  "vars": {
+    "TOOLKIT_CANONICAL_ORIGIN": "https://tools.136136136.xyz",
+    "SHARE_SHORT_ORIGIN": "https://c.136136136.xyz",
+    "SHARE_ALLOW_CUSTOM_ROOM_IDS": "true",
+    "SHARE_DEFAULT_TTL_SECONDS": "3600",
+    "SHARE_MIN_TTL_SECONDS": "300",
+    "SHARE_MAX_TTL_SECONDS": "86400",
+    "SHARE_MAX_PAYLOAD_BYTES": "65536",
+    "SHARE_MAX_FILE_META_BYTES": "8192",
+    "SHARE_MAX_FILE_BYTES": "26214400",
+    "SHARE_MAX_ROOM_BYTES": "104857600",
+    "SHARE_MAX_FILES": "10"
   },
   "routes": [
     {
+      "pattern": "tools.136136136.xyz",
+      "custom_domain": true
+    },
+    {
       "pattern": "id.136136136.xyz",
+      "custom_domain": true
+    },
+    {
+      "pattern": "c.136136136.xyz",
       "custom_domain": true
     }
   ]

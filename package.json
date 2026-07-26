@@ -1,26 +1,30 @@
 {
-  "name": "id-toolkit",
+  "name": "online-toolkit",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "homepage": "https://id.136136136.xyz/",
+  "homepage": "https://tools.136136136.xyz/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SchweppesSoda/id-toolkit.git"
+    "url": "https://github.com/SchweppesSoda/online-toolkit.git"
   },
-  "description": "隐印：完全在浏览器本地运行的证件裁剪、透视矫正与用途水印工具。",
+  "description": "部署在 Cloudflare Workers 上的隐私友好型在线工具集合。",
   "scripts": {
     "dev": "vite",
+    "dev:worker": "npm run build && wrangler dev",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "check": "npm run test && npm run build",
-    "deploy": "wrangler deploy"
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "exifreader": "4.41.3",
+    "qr-scanner": "1.4.2",
+    "qrcode": "1.5.4",
     "scanic": "1.5.1"
   },
   "devDependencies": {

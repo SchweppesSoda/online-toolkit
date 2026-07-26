@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="本地识别、检查和生成二维码；扫描结果不会自动打开，图片与摄像头画面不会上传。">
+  <meta name="theme-color" content="#f2efe8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>识码 · 二维码隐私工具</title>
+  <link rel="stylesheet" href="/src/tool-shell.css">
+  <link rel="stylesheet" href="/src/qr-privacy.css">
+</head>
+<body class="qr-page">
+  <header class="tool-shell-header">
+    <a class="tool-shell-brand" href="/" aria-label="返回在线工具箱">
+      <span class="tool-shell-mark" aria-hidden="true">匣</span>
+      <span><strong>在线工具箱</strong><small>QR PRIVACY</small></span>
+    </a>
+    <nav aria-label="页面导航">
+      <a href="/">全部工具</a>
+      <a href="https://github.com/SchweppesSoda/online-toolkit" target="_blank" rel="noreferrer">查看源码</a>
+    </nav>
+  </header>
+
+  <main class="qr-main">
+    <section class="qr-hero" aria-labelledby="qrTitle">
+      <div>
+        <p class="qr-eyebrow">二维码隐私工具</p>
+        <h1 id="qrTitle">先看清它是什么，<em>再决定<span class="no-break">要不要打开</span>。</em></h1>
+        <p>本地识别图片或摄像头中的二维码，拆开网址、域名和常见跟踪参数；也可以在本机生成二维码。</p>
+      </div>
+      <aside><strong>不会自动打开链接</strong><span>识别结果只显示为文字。每一次跳转，都由你亲自确认。</span></aside>
+    </section>
+
+    <div class="qr-tabs" role="tablist" aria-label="二维码工具模式">
+      <button id="scanTab" type="button" role="tab" aria-selected="true" aria-controls="scanPanel">识别与检查</button>
+      <button id="generateTab" type="button" role="tab" aria-selected="false" aria-controls="generatePanel">生成二维码</button>
+    </div>
+
+    <section class="qr-mode-panel" id="scanPanel" role="tabpanel" aria-labelledby="scanTab">
+      <div class="qr-scan-grid">
+        <section class="qr-card scan-source-card">
+          <div class="qr-card-heading"><span>1</span><div><h2>选择识别方式</h2><p>图片和摄像头画面都只在当前浏览器中处理。</p></div></div>
+          <div class="qr-drop" id="qrDrop" tabindex="0" role="button" aria-controls="qrFile" aria-label="选择或拖入含二维码的图片">
+            <span class="qr-drop-mark" aria-hidden="true">码</span>
+            <strong>拖入或粘贴二维码图片</strong>
+            <span>支持浏览器能读取的常见图片，最大 20 MB</span>
+            <button class="qr-button primary" id="chooseQrImage" type="button">选择图片识别</button>
+          </div>
+          <input class="qr-visually-hidden" id="qrFile" type="file" accept="image/*">
+          <div class="or-divider"><span>或者</span></div>
+          <button class="qr-button camera" id="startCamera" type="button">开启摄像头扫一扫</button>
+          <p class="camera-note">只有点击后才会申请相机权限；不需要麦克风权限。</p>
+          <div class="camera-wrap" id="cameraWrap" hidden>
+            <video id="qrVideo" muted playsinline aria-label="二维码摄像头预览"></video>
+            <button class="qr-button stop" id="stopCamera" type="button">关闭摄像头</button>
+          </div>
+          <p class="scan-status" id="scanStatus" role="status" aria-live="polite">等待选择图片或开启摄像头。</p>
+        </section>
+
+        <section class="qr-card qr-result-card">
+          <div class="qr-card-heading"><span>2</span><div><h2>检查识别结果</h2><p>本站不会执行或自动打开二维码里的内容。</p></div></div>
+          <div class="qr-result-empty" id="qrResultEmpty">识别后，这里会显示原始内容、协议、域名和风险提醒。</div>
+          <div class="qr-result" id="qrResult" hidden>
+            <div class="qr-result-summary">
+              <div><span id="resultKind">识别结果</span><h3 id="resultSummary"></h3></div>
+              <span class="qr-risk neutral" id="resultRisk">等待分析</span>
+            </div>
+            <div class="raw-result"><span>原始内容</span><pre id="rawResult"></pre></div>
+            <dl class="qr-details" id="qrDetails"></dl>
+            <div class="tracking-clean" id="trackingClean" hidden>
+              <strong>可移除常见跟踪参数</strong>
+              <p id="cleanUrlPreview"></p>
+              <button class="qr-button secondary" id="useCleanUrl" type="button">复制去跟踪链接</button>
+            </div>
+            <div class="qr-result-actions">
+              <button class="qr-button secondary" id="copyQrResult" type="button">复制原始内容</button>
+              <a class="qr-button link-action" id="openQrLink" href="#" target="_blank" rel="noopener noreferrer" hidden>确认后打开链接</a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="qr-mode-panel" id="generatePanel" role="tabpanel" aria-labelledby="generateTab" hidden>
+      <div class="qr-generate-grid">
+        <section class="qr-card generator-form-card">
+          <div class="qr-card-heading"><span>1</span><div><h2>填写二维码内容</h2><p>输入只用于当前页面生成，不会上传。</p></div></div>
+          <label class="qr-field">内容类型
+            <select id="generatorType">
+              <option value="url">网址</option>
+              <option value="text">文字</option>
+              <option value="wifi">Wi-Fi</option>
+            </select>
+          </label>
+          <div data-generator-fields="url">
+            <label class="qr-field">网址
+              <input id="generatorUrl" type="url" inputmode="url" placeholder="https://example.com" maxlength="2000">
+              <small>没有填写协议时，会自动使用 https://。</small>
+            </label>
+          </div>
+          <div data-generator-fields="text" hidden>
+            <label class="qr-field">文字内容
+              <textarea id="generatorText" rows="7" maxlength="2000" placeholder="输入要放进二维码的文字"></textarea>
+            </label>
+          </div>
+          <div data-generator-fields="wifi" hidden>
+            <label class="qr-field">网络名称（SSID）
+              <input id="wifiName" type="text" maxlength="128" autocomplete="off">
+            </label>
+            <label class="qr-field">安全类型
+              <select id="wifiSecurity">
+                <option value="WPA">WPA / WPA2 / WPA3</option>
+                <option value="WEP">WEP</option>
+                <option value="nopass">无密码</option>
+              </select>
+            </label>
+            <label class="qr-field" id="wifiPasswordField">Wi-Fi 密码
+              <input id="wifiPassword" type="password" maxlength="256" autocomplete="new-password">
+            </label>
+            <label class="qr-check"><input id="wifiHidden" type="checkbox"><span>这是隐藏网络</span></label>
+            <p class="wifi-warning">Wi-Fi 二维码包含可直接读取的密码，只应分享给可信的人。</p>
+          </div>
+          <button class="qr-button primary wide" id="generateQr" type="button">在本机生成二维码</button>
+          <p class="generate-status" id="generateStatus" role="status" aria-live="polite">等待填写内容。</p>
+        </section>
+
+        <section class="qr-card qr-output-card">
+          <div class="qr-card-heading"><span>2</span><div><h2>保存二维码</h2><p>PNG 适合日常分享，SVG 适合打印和排版。</p></div></div>
+          <div class="qr-canvas-wrap" id="qrCanvasWrap">
+            <canvas id="qrCanvas" width="512" height="512" aria-label="生成的二维码"></canvas>
+            <span id="qrCanvasPlaceholder">生成后显示在这里</span>
+          </div>
+          <p class="qr-payload-preview" id="qrPayloadPreview">尚未生成内容。</p>
+          <div class="qr-output-actions">
+            <button class="qr-button secondary" id="downloadQrPng" type="button" disabled>下载 PNG</button>
+            <button class="qr-button secondary" id="downloadQrSvg" type="button" disabled>下载 SVG</button>
+            <button class="qr-button secondary" id="copyQrPayload" type="button" disabled>复制二维码内容</button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="qr-boundary" aria-label="二维码安全提醒">
+      <strong>二维码只是另一种文字包装</strong>
+      <p>“识别成功”不代表内容可信。本站可以提示危险协议、明文 HTTP、短网址、IP 地址、国际化域名和常见跟踪参数，但无法判断某个正常网址背后的页面是否安全。</p>
+    </section>
+  </main>
+
+  <footer class="tool-shell-footer qr-source-footer">
+    <span>识别使用 <a href="https://github.com/nimiq/qr-scanner" target="_blank" rel="noreferrer">qr-scanner 1.4.2</a>；生成使用 <a href="https://github.com/soldair/node-qrcode" target="_blank" rel="noreferrer">node-qrcode 1.5.4</a>（均为 MIT）。</span>
+    <a href="https://github.com/SchweppesSoda/online-toolkit/blob/main/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">第三方代码与许可证</a>
+  </footer>
+
+  <script type="module" src="/src/qr-privacy.js"></script>
+</body>
+</html>

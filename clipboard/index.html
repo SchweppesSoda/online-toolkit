@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="无需登录的临时在线剪贴板，支持自定义短房间、便捷分享、端到端加密和自动销毁。">
+  <meta name="theme-color" content="#f2efe8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>云笺 · 临时在线剪贴板</title>
+  <link rel="stylesheet" href="/src/tool-shell.css">
+</head>
+<body class="clipboard-page">
+  <header class="tool-shell-header">
+    <a class="tool-shell-brand" href="https://tools.136136136.xyz/" aria-label="返回在线工具箱">
+      <span class="tool-shell-mark" aria-hidden="true">匣</span>
+      <span><strong>在线工具箱</strong><small>ENCRYPTED CLIPBOARD</small></span>
+    </a>
+    <nav aria-label="页面导航">
+      <a href="https://tools.136136136.xyz/">全部工具</a>
+      <a href="https://github.com/SchweppesSoda/online-toolkit" target="_blank" rel="noreferrer">查看源码</a>
+    </nav>
+  </header>
+
+  <main id="clipboard-root"></main>
+
+  <footer class="tool-shell-footer">
+    <span>内容只适合临时中转，请保留本地副本。</span>
+    <span>隐私模式的密码与密钥仅在浏览器中处理；到期后自动销毁云端数据。</span>
+  </footer>
+
+  <script type="module" src="/src/clipboard-entry.js"></script>
+</body>
+</html>

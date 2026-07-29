@@ -14,6 +14,14 @@ function json(route, status, data) {
   });
 }
 
+function jsonError(route, status, code, message) {
+  return route.fulfill({
+    status,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: false, error: { code, message } })
+  });
+}
+
 test("隐私短房间使用 15 分钟、浏览器加密，并可由房主主动销毁", async ({ page }) => {
   const ownerToken = "O".repeat(43);
   let room = null;
@@ -94,6 +102,7 @@ test("隐私短房间使用 15 分钟、浏览器加密，并可由房主主动�
   await expect(page).toHaveURL(/\/clipboard\/r\/team-demo$/);
   await expect(page.getByText("隐私房间", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "销毁房间" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "复制管理链接" })).toBeVisible();
   await expect(page.getByRole("button", { name: "复制密码" })).toBeVisible();
   await page.getByRole("button", { name: "复制密码" }).click();
   await expect.poll(() => page.evaluate(() => globalThis.__copiedPassword))
@@ -131,11 +140,83 @@ test("隐私短房间使用 15 分钟、浏览器加密，并可由房主主动�
   expect(uploadedRequest.body.toString("utf8")).not.toContain("private file body");
   await expect(page.getByText("secret.txt", { exact: true })).toBeVisible();
 
+  await page.getByRole("button", { name: "复制管理链接" }).click();
+  const managementLink = `https://c.136136136.xyz/team-demo#owner=${ownerToken}`;
+  await expect.poll(() => page.evaluate(() => globalThis.__copiedPassword))
+    .toBe(managementLink);
+
+  await page.evaluate(() => sessionStorage.clear());
+  await page.getByRole("button", { name: "退出" }).click();
+  await page.getByRole("textbox", { name: "房间名称或链接" }).fill(managementLink);
+  await page.getByRole("button", { name: "打开房间" }).click();
+  await page.getByLabel("解锁密码").fill("correct horse battery staple");
+  await page.getByRole("button", { name: "解锁并进入" }).click();
+  await expect(page.getByRole("button", { name: "销毁房间" })).toBeVisible();
+  await expect(page).toHaveURL(/\/clipboard\/r\/team-demo$/);
+
   page.on("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "销毁房间" }).click();
   await expect.poll(() => destroyRequest).not.toBeNull();
   expect(destroyRequest.authorization).toBe(`Bearer ${ownerToken}`);
   await expect(page.locator('[data-view="entry"]')).toBeVisible();
+});
+
+test("不存在的房间可确认创建为默认一小时的无密码临时房间", async ({ page }) => {
+  const ownerToken = "N".repeat(43);
+  const roomId = "fresh-room";
+  let room = null;
+  let createRequest = null;
+
+  await page.route("**/api/share/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "GET" && url.pathname === `/api/share/rooms/${roomId}`) {
+      return jsonError(route, 404, "ROOM_NOT_FOUND", "Room not found.");
+    }
+    if (request.method() === "POST" && url.pathname === "/api/share/rooms") {
+      createRequest = request.postDataJSON();
+      const now = Date.now();
+      room = {
+        roomId,
+        mode: "convenience",
+        crypto: null,
+        collaborative: true,
+        publicWritable: true,
+        legacy: false,
+        payload: "",
+        revision: 0,
+        files: [],
+        createdAt: now,
+        updatedAt: now,
+        expiresAt: now + 3600000
+      };
+      return json(route, 201, { ...room, ownerToken, writeToken: ownerToken });
+    }
+    return route.fulfill({ status: 404, body: "not found" });
+  });
+
+  await page.goto("/clipboard/");
+  await page.getByRole("textbox", { name: "房间名称或链接" }).fill(roomId);
+  await page.getByRole("button", { name: "打开房间" }).click();
+
+  await expect(page.locator('[data-view="missing"]')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "房间不存在" })).toBeVisible();
+  await expect(page.getByText(
+    "房间 fresh-room 不存在，是否用该名称创建一个无需密码的临时房间？",
+    { exact: true }
+  )).toBeVisible();
+  await page.getByRole("button", { name: "创建临时房间" }).click();
+
+  expect(createRequest).toEqual({
+    roomId,
+    mode: "convenience",
+    collaborative: true,
+    ttlSeconds: 3600,
+    crypto: null
+  });
+  await expect(page.locator('[data-view="room"]')).toBeVisible();
+  await expect(page.getByText("便捷房间", { exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "共享文字" })).toBeEditable();
 });
 
 test("便捷模式生成短链接，支持自定义 7 分钟和无令牌协作", async ({ page }) => {
@@ -296,6 +377,7 @@ test("隐私短房间使用密码解锁，协作者可编辑但不能看到房�
   await expect(note).toHaveValue("加密后的初始内容");
   await expect(note).toBeEditable();
   await expect(page.getByRole("button", { name: "销毁房间" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "复制管理链接" })).toBeHidden();
 
   await note.fill("协作者的新内容");
   await expect.poll(() => savedRequest).not.toBeNull();

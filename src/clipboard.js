@@ -1,4 +1,3 @@
-import "./clipboard.css";
 import {
   createPasswordRoomSecrets,
   decryptFile,
@@ -287,6 +286,18 @@ function template() {
         </section>
       </div>
 
+      <section class="clipboard-unlock clipboard-missing" data-view="missing" hidden
+        aria-labelledby="clipboard-missing-title">
+        <p class="clipboard-card-no">ROOM NOT FOUND</p>
+        <h2 id="clipboard-missing-title">房间不存在</h2>
+        <p>房间 <strong data-role="missing-room">—</strong> 不存在，是否用该名称创建一个无需密码的临时房间？</p>
+        <p class="clipboard-missing-note">便捷模式 · 1 小时后自动销毁 · 知道链接的人可以编辑</p>
+        <div class="clipboard-unlock-actions">
+          <button class="clipboard-button primary" type="button" data-action="create-missing">创建临时房间</button>
+          <button class="clipboard-button secondary" type="button" data-action="missing-back">暂不创建</button>
+        </div>
+      </section>
+
       <section class="clipboard-unlock" data-view="unlock" hidden aria-labelledby="clipboard-unlock-title">
         <p class="clipboard-card-no">PRIVATE ROOM</p>
         <h2 id="clipboard-unlock-title">输入房间密码</h2>
@@ -317,6 +328,8 @@ function template() {
             <button class="clipboard-mini" type="button" data-action="share">复制房间链接</button>
             <button class="clipboard-mini" type="button" data-action="copy-room-password" hidden>复制密码</button>
             <button class="clipboard-mini" type="button" data-action="share-edit" hidden>复制可编辑链接</button>
+            <button class="clipboard-mini" type="button" data-action="share-owner" hidden
+              title="持有管理链接的人可以销毁房间">复制管理链接</button>
             <button class="clipboard-mini danger" type="button" data-action="destroy-room" hidden>销毁房间</button>
             <button class="clipboard-mini subtle" type="button" data-action="leave">退出</button>
           </div>
@@ -382,6 +395,7 @@ export function mountClipboard(root, options = {}) {
   const pollInterval = Math.max(1000, options.pollInterval || 2500);
   const maxFileBytes = options.maxFileBytes || DEFAULT_MAX_FILE_BYTES;
   const entry = root.querySelector('[data-view="entry"]');
+  const missingView = root.querySelector('[data-view="missing"]');
   const unlockView = root.querySelector('[data-view="unlock"]');
   const roomView = root.querySelector('[data-view="room"]');
   const roomInput = root.querySelector('[data-role="room-input"]');
@@ -410,6 +424,7 @@ export function mountClipboard(root, options = {}) {
     expiresAt: 0,
     revision: 0,
     files: [],
+    missingRoomId: "",
     pendingRoom: null,
     pendingReference: null,
     pollTimer: 0,
@@ -491,7 +506,7 @@ export function mountClipboard(root, options = {}) {
     return Boolean(state.roomId) && !isLegacyRoomId(state.roomId);
   }
 
-  function shareUrl(editable = false) {
+  function shareUrl(editable = false, manageable = false) {
     let url;
     if (isNamedRoom()) {
       url = new URL(shortOrigin);
@@ -504,6 +519,7 @@ export function mountClipboard(root, options = {}) {
     const params = new URLSearchParams();
     if (state.legacy && state.encodedKey) params.set("key", state.encodedKey);
     if (editable && state.legacy && state.writeToken) params.set("write", state.writeToken);
+    if (manageable && state.ownerToken) params.set("owner", state.ownerToken);
     url.hash = params.toString();
     return url.toString();
   }
@@ -540,8 +556,24 @@ export function mountClipboard(root, options = {}) {
 
   function setViews(view) {
     entry.hidden = view !== "entry";
+    missingView.hidden = view !== "missing";
     unlockView.hidden = view !== "unlock";
     roomView.hidden = view !== "room";
+  }
+
+  function showMissingRoom(roomId) {
+    state.missingRoomId = roomId;
+    root.querySelector('[data-role="missing-room"]').textContent = roomId;
+    setViews("missing");
+  }
+
+  function prepareMissingRoomDefaults(roomId) {
+    roomNameInput.value = roomId;
+    root.querySelector('input[name="room-mode"][value="convenience"]').checked = true;
+    root.querySelector('[data-role="collaborative"]').checked = true;
+    ttlPreset.value = "3600";
+    root.querySelector('[data-role="custom-ttl-field"]').hidden = true;
+    updateModeUI();
   }
 
   function updateModeUI() {
@@ -582,6 +614,7 @@ export function mountClipboard(root, options = {}) {
     root.querySelector('[data-action="copy-room-password"]').hidden =
       !(state.mode === "private" && state.roomPassword);
     root.querySelector('[data-action="share-edit"]').hidden = !(state.legacy && state.canWrite);
+    root.querySelector('[data-action="share-owner"]').hidden = !state.ownerToken;
     root.querySelector('[data-action="destroy-room"]').hidden = !state.ownerToken;
     root.querySelector('[data-role="save-state"]').textContent = state.canWrite ? "已同步" : "只读房间";
     root.querySelector('[data-role="save-hint"]').textContent = state.mode === "private"
@@ -833,10 +866,23 @@ export function mountClipboard(root, options = {}) {
     state.encodedKey = reference.encodedKey || "";
     state.ownerToken = reference.ownerToken || safeStorageGet(ownerStorageKey(roomId));
     state.writeToken = reference.writeToken || "";
-    const room = await request(`/rooms/${encodeURIComponent(roomId)}`, {
-      method: "GET",
-      auth: "none"
-    });
+    let room;
+    try {
+      room = await request(`/rooms/${encodeURIComponent(roomId)}`, {
+        method: "GET",
+        auth: "none"
+      });
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.status === 404 &&
+        isValidCustomRoomId(roomId)
+      ) {
+        showMissingRoom(roomId);
+        return false;
+      }
+      throw error;
+    }
     return finishEntering(room, reference);
   }
 
@@ -1123,6 +1169,7 @@ export function mountClipboard(root, options = {}) {
     state.ownerToken = "";
     state.expiresAt = 0;
     state.files = [];
+    state.missingRoomId = "";
     state.revision = 0;
     state.pendingRoom = null;
     state.pendingReference = null;
@@ -1141,7 +1188,7 @@ export function mountClipboard(root, options = {}) {
   }
 
   async function destroyRoom() {
-    if (!state.ownerToken) return announce("只有房间创建者可以销毁房间", "error");
+    if (!state.ownerToken) return announce("只有持有房主管理权限的终端可以销毁房间", "error");
     if (!globalThis.confirm(`确定立即销毁房间“${state.roomId}”吗？文字和文件都会删除。`)) return;
     if (!globalThis.confirm("这是最后确认：销毁后无法恢复，也不会影响他人已经下载的副本。")) return;
     const roomId = state.roomId;
@@ -1188,6 +1235,19 @@ export function mountClipboard(root, options = {}) {
     if (ttlPreset.value === "custom") ttlCustom.focus();
   });
   root.querySelector('[data-action="create"]').addEventListener("click", createRoom);
+  root.querySelector('[data-action="create-missing"]').addEventListener("click", async () => {
+    const roomId = state.missingRoomId;
+    if (!roomId) return;
+    prepareMissingRoomDefaults(roomId);
+    state.missingRoomId = "";
+    setViews("entry");
+    await createRoom();
+  });
+  root.querySelector('[data-action="missing-back"]').addEventListener("click", () => {
+    resetRoomState();
+    setViews("entry");
+    navigateToEntry();
+  });
   root.querySelector('[data-role="join-form"]').addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -1236,6 +1296,9 @@ export function mountClipboard(root, options = {}) {
   });
   root.querySelector('[data-action="share-edit"]').addEventListener("click", () => {
     copy(shareUrl(true), "可编辑链接已复制，请只发给信任的人");
+  });
+  root.querySelector('[data-action="share-owner"]').addEventListener("click", () => {
+    copy(shareUrl(false, true), "管理链接已复制；持有者可以销毁房间，请只发给信任的人");
   });
   root.querySelector('[data-action="copy-text"]').addEventListener("click", () => {
     copy(textArea.value, "文字已复制");

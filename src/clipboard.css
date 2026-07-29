@@ -153,7 +153,7 @@
 }
 
 .clipboard-field { display: block; margin-bottom: 13px; }
-.clipboard-field > span {
+.clipboard-field > span:not(.clipboard-inline-field) {
   display: block;
   margin-bottom: 7px;
   color: var(--clip-muted);
@@ -771,7 +771,7 @@
 .clipboard-security strong { font-size: 16px; }
 .clipboard-security div span { font-size: 13px; }
 .clipboard-entry-card > p:not(.clipboard-card-no) { font-size: 15px; }
-.clipboard-field > span,
+.clipboard-field > span:not(.clipboard-inline-field),
 .clipboard-field > label,
 .clipboard-mode-picker legend {
   display: block;

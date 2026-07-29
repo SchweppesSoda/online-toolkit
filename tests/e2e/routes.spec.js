@@ -30,6 +30,22 @@ test.describe("在线工具箱路由", () => {
     await expect(page.locator('[data-view="entry"]')).toBeVisible();
     await expect(page.getByRole("button", { name: "创建隐私房间" })).toBeVisible();
 
+    const roomNameLayout = await page.evaluate(() => {
+      const input = document.querySelector('[data-role="room-name"]');
+      const button = document.querySelector('[data-action="random-name"]');
+      const wrapper = input.parentElement;
+      const inputRect = input.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      return {
+        display: getComputedStyle(wrapper).display,
+        topDelta: Math.abs(inputRect.top - buttonRect.top),
+        bottomDelta: Math.abs(inputRect.bottom - buttonRect.bottom)
+      };
+    });
+    expect(roomNameLayout.display).toBe("grid");
+    expect(roomNameLayout.topDelta).toBeLessThanOrEqual(1);
+    expect(roomNameLayout.bottomDelta).toBeLessThanOrEqual(1);
+
     const password = page.locator('[data-role="password"]');
     const passwordPattern = /^(?:[A-HJ-NP-Z2-9]{4}-){4}[A-HJ-NP-Z2-9]{4}$/;
     await expect(password).toHaveValue(passwordPattern);
